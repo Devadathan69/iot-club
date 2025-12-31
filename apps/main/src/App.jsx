@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -11,6 +10,10 @@ import SectionWrapper from './components/SectionWrapper';
 import Background from './components/Background';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailsPage from './pages/ProjectDetailsPage';
+import AdminDashboard from './pages/AdminDashboard';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 
 // Scroll to top on route change
@@ -98,18 +101,22 @@ const HomePage = () => (
 
 function App() {
     return (
-        <Router>
-            <ScrollToTop />
-            <StoreLayout>
-                <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/projects" element={<ProjectsPage />} />
-                    <Route path="/projects/:id" element={<ProjectDetailsPage />} />
-                </Routes>
-            </StoreLayout>
-        </Router>
+        <AuthProvider>
+            <Router>
+                <ScrollToTop />
+                <StoreLayout>
+                    <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/projects" element={<ProjectsPage />} />
+                        <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+                        <Route path="/admin" element={<AdminDashboard />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                    </Routes>
+                </StoreLayout>
+            </Router>
+        </AuthProvider>
     );
 }
 
 export default App;
-

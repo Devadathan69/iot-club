@@ -8,7 +8,8 @@ import {
     GoogleAuthProvider,
     signInWithPopup
 } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 
 const AuthContext = createContext();
 
@@ -19,16 +20,46 @@ export function useAuth() {
 export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isMember, setIsMember] = useState(false);
+    const [membershipData, setMembershipData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setCurrentUser(user);
             if (user) {
+                // Check Admin Claim
                 const token = await user.getIdTokenResult();
                 setIsAdmin(!!token.claims.admin);
+
+                // Check Membership Status
+                try {
+                    const q = query(collection(db, 'members'), where('email', '==', user.email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const data = querySnapshot.docs[0].data();
+                        setMembershipData(data);
+
+                        // Check if approved and has membership ID
+                        if (data.status === 'approved' && data.membershipId) {
+                            setIsMember(true);
+                        } else {
+                            setIsMember(false);
+                        }
+                    } else {
+                        setMembershipData(null);
+                        setIsMember(false);
+                    }
+                } catch (error) {
+                    console.error("Error checking membership:", error);
+                    setIsMember(false);
+                }
+
             } else {
                 setIsAdmin(false);
+                setIsMember(false);
+                setMembershipData(null);
             }
             setLoading(false);
         });
@@ -62,6 +93,8 @@ export function AuthProvider({ children }) {
     const value = {
         currentUser,
         isAdmin,
+        isMember,
+        membershipData,
         login,
         signup,
         loginWithGoogle,

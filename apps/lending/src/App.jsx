@@ -15,7 +15,14 @@ function App() {
                 <CartProvider>
                     <Routes>
                         <Route path="/" element={<Layout />}>
-                            <Route index element={<Home />} />
+                            <Route
+                                index
+                                element={
+                                    <ProtectedRoute memberOnly>
+                                        <Home />
+                                    </ProtectedRoute>
+                                }
+                            />
                             <Route path="login" element={<Login />} />
                             <Route path="register" element={<Register />} />
                             <Route

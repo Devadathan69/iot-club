@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, CreditCard, Loader2, AlertCircle } from 'lucide-react';
-import { createOrder, verifyPayment } from '../lib/paymentMock';
+import { QrCode, CreditCard, Loader2, AlertCircle, ArrowRight, Upload } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+// Cloudinary Config
+// Cloudinary Config
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 export default function Payment() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const fee = 299;
+    const fee = 100;
+
+    // Image Upload State
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [screenshotUrl, setScreenshotUrl] = useState(null);
 
     const [userData, setUserData] = useState(null);
 
@@ -21,38 +33,91 @@ export default function Payment() {
         setUserData(JSON.parse(data));
     }, [navigate]);
 
-    const handlePayment = async () => {
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const uploadToCloudinary = async () => {
+        const formData = new FormData();
+        formData.append("file", selectedImage);
+        formData.append("upload_preset", UPLOAD_PRESET);
+
+        setUploadingImage(true);
+        try {
+            const response = await fetch(
+                `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+                {
+                    method: "POST",
+                    body: formData,
+                }
+            );
+            const data = await response.json();
+            setUploadingImage(false);
+            if (data.secure_url) {
+                setScreenshotUrl(data.secure_url);
+                return data.secure_url;
+            } else {
+                throw new Error("Upload failed");
+            }
+        } catch (err) {
+            console.error("Cloudinary Error:", err);
+            setUploadingImage(false);
+            throw err;
+        }
+    };
+
+    const handlePaymentSubmit = async (e) => {
+        e.preventDefault();
         setLoading(true);
         setError(null);
 
+        if (!selectedImage) {
+            setError("Please upload a screenshot of your payment.");
+            setLoading(false);
+            return;
+        }
+
         try {
-            // 1. Create Order
-            const order = await createOrder(fee);
-            console.log("Order Created:", order);
+            // 1. Upload Image First
+            let uploadedUrl = screenshotUrl;
+            if (!uploadedUrl) {
+                uploadedUrl = await uploadToCloudinary();
+            }
 
-            // 2. Simulate Razorpay Checkout (Mock)
-            // In real app, window.Razorpay open would happen here
+            // 2. Save member request to Firestore
+            const memberData = {
+                ...userData,
+                transactionId: 'SCREENSHOT_VERIFICATION', // Placeholder
+                screenshotUrl: uploadedUrl,
+                status: 'pending_approval',
+                membershipId: null,
+                paymentAmount: fee,
+                paymentMethod: 'upl_screenshot',
+                createdAt: serverTimestamp(),
+            };
 
-            // Simulating user success action
-            setTimeout(async () => {
-                const dummyPaymentResponse = {
-                    razorpay_payment_id: "pay_mock_123",
-                    razorpay_order_id: order.id,
-                    razorpay_signature: "mock_sig_123"
-                };
+            await addDoc(collection(db, 'members'), memberData);
 
-                // 3. Verify Payment
-                const verify = await verifyPayment(dummyPaymentResponse);
+            // Clear temp data
+            sessionStorage.removeItem('temp_member_data');
 
-                if (verify.success) {
-                    navigate('/success');
-                } else {
-                    throw new Error("Payment verification failed");
+            navigate('/success', {
+                state: {
+                    memberData: { ...memberData, id: 'PENDING' }
                 }
-            }, 2000);
+            });
 
         } catch (err) {
-            setError(err.message || "Payment Failed");
+            console.error(err);
+            setError("Failed to submit request. Please check your connection and try again.");
             setLoading(false);
         }
     };
@@ -60,63 +125,96 @@ export default function Payment() {
     if (!userData) return null;
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-black">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-lg overflow-hidden shadow-xl"
+                className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row"
             >
-                <div className="bg-gradient-to-r from-neon-purple/20 to-neon-cyan/20 p-8 text-center border-b border-white/5">
-                    <p className="text-neon-cyan font-mono text-sm mb-2">PAYMENT SUMMARY</p>
-                    <h1 className="text-4xl font-bold text-white mb-2">₹{fee}</h1>
-                    <p className="text-gray-400 text-sm">IoT Club Membership (1 Year)</p>
-                </div>
-
-                <div className="p-8 space-y-6">
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-400">Student Name</span>
-                            <span className="font-semibold">{userData.fullName}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-400">Department</span>
-                            <span className="font-semibold">{userData.department}</span>
-                        </div>
-                        <div className="h-px bg-white/10" />
-                        <div className="flex items-start gap-3 text-sm text-gray-400 bg-black/20 p-4 rounded-lg">
-                            <ShieldCheck className="w-5 h-5 text-green-500 shrink-0" />
-                            <p>This is a secure 256-bit encrypted transaction. No card details are stored on our servers.</p>
+                {/* Left Side: QR Code & Instructions */}
+                <div className="md:w-1/2 bg-gradient-to-br from-neon-purple/10 to-neon-cyan/10 p-8 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-white/5">
+                    <div className="bg-white p-4 rounded-xl shadow-lg mb-6">
+                        {/* Placeholder QR Code - In production replace with real QR */}
+                        <div className="w-48 h-48 bg-gray-200 flex items-center justify-center rounded-lg border-2 border-dashed border-gray-400">
+                            <QrCode className="w-16 h-16 text-gray-500" />
+                            <span className="sr-only">Access via UPI App</span>
                         </div>
                     </div>
 
-                    {error && (
-                        <div className="flex items-center gap-2 text-red-400 bg-red-400/10 p-3 rounded-lg text-sm">
-                            <AlertCircle className="w-4 h-4" />
-                            {error}
-                        </div>
-                    )}
-
-                    <button
-                        onClick={handlePayment}
-                        disabled={loading}
-                        className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                Processing...
-                            </>
-                        ) : (
-                            <>
-                                <CreditCard className="w-5 h-5" />
-                                Pay Now
-                            </>
-                        )}
-                    </button>
-
-                    <p className="text-center text-xs text-gray-600">
-                        *Mock Payment Gateway: No real money will be deducted.
+                    <h2 className="text-xl font-bold text-white mb-2">Scan & Pay ₹{fee}</h2>
+                    <p className="text-gray-400 text-center text-sm max-w-xs mb-6">
+                        Use any UPI App to scan the QR code.
                     </p>
+                </div>
+
+                {/* Right Side: Verification Form */}
+                <div className="md:w-1/2 p-8 flex flex-col justify-center">
+                    <div className="mb-6">
+                        <p className="text-neon-cyan font-mono text-xs mb-2">STEP 2 OF 2</p>
+                        <h1 className="text-2xl font-bold text-white mb-1">Upload Proof</h1>
+                        <p className="text-gray-400 text-sm">Upload the payment screenshot.</p>
+                    </div>
+
+                    <form onSubmit={handlePaymentSubmit} className="space-y-4">
+                        {/* Screenshot Upload */}
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1.5 ml-1">Payment Screenshot</label>
+                            <div className="relative group">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="hidden"
+                                    id="screenshot-upload"
+                                />
+                                <label
+                                    htmlFor="screenshot-upload"
+                                    className={`w-full h-48 flex flex-col items-center justify-center border-2 border-dashed rounded-xl cursor-pointer transition-colors ${imagePreview ? 'border-neon-cyan/50 bg-neon-cyan/5' : 'border-gray-700 hover:border-gray-500 bg-dark-bg'
+                                        }`}
+                                >
+                                    {imagePreview ? (
+                                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-lg">
+                                            <img src={imagePreview} alt="Preview" className="h-full object-contain" />
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <span className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">Change Image</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center text-gray-500 gap-2">
+                                            <Upload className="w-8 h-8 text-neon-cyan" />
+                                            <span className="text-sm font-medium text-white">Click to upload screenshot</span>
+                                            <span className="text-xs">Supports JPG, PNG</span>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        </div>
+
+                        {error && (
+                            <div className="flex items-center gap-2 text-red-400 bg-red-400/10 p-3 rounded-lg text-sm animate-pulse">
+                                <AlertCircle className="w-4 h-4" />
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading || uploadingImage}
+                            className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group"
+                        >
+                            {loading || uploadingImage ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    {uploadingImage ? 'Uploading...' : 'Verifying...'}
+                                </>
+                            ) : (
+                                <>
+                                    Submit Request
+                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
+                        </button>
+                    </form>
                 </div>
             </motion.div>
         </div>

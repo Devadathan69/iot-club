@@ -1,70 +1,70 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const logger = require("firebase-functions/logger");
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+/**
+ * CLOUD FUNCTION FOR EMAIL AUTOMATION
+ * ===================================
+ * This function triggers when a member document is updated in Firestore.
+ * If status changes to 'approved', it sends a welcome email with the IOT ID.
+ * 
+ * SETUP:
+ * 1. Initialize Firebase Functions: `firebase init functions`
+ * 2. Install Nodemailer: `npm install nodemailer`
+ * 3. Configure Gmail/SMTP: Enable "App Passwords" in Google Account.
+ * 
+ * DEPLOY: `firebase deploy --only functions`
+ */
 
-initializeApp();
-const db = getFirestore();
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const nodemailer = require("nodemailer");
 
-// Stub: Trigger when a new lend request is created
-exports.onLendRequestCreated = onDocumentCreated("lendRequests/{requestId}", (event) => {
-    const snapshot = event.data;
-    if (!snapshot) {
-        return;
+admin.initializeApp();
+
+// Configure Transporter (Use Environment Variables in Production!)
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'your-email@gmail.com', // REPLACE WITH CLUB EMAIL
+        pass: 'your-app-password'      // REPLACE WITH APP PASSWORD
     }
-    const data = snapshot.data();
-
-    logger.info(`New Lend Request Created: ${event.params.requestId}`, data);
-
-    // PLACEHOLDER: Send notification to Admin
-    // Example: 
-    // sendEmailToAdmin({
-    //   subject: "New Lend Request",
-    //   body: `User ${data.user_name} requested ${data.items.length} items.`
-    // });
 });
 
-// Stub: Scheduled overdue reminder (Requires Blaze Plan)
-// Runs every day at 10:00 AM Asia/Kolkata
-exports.scheduledOverdueReminder = onSchedule({
-    schedule: "every day 10:00",
-    timeZone: "Asia/Kolkata",
-}, async (event) => {
-    logger.info("Running scheduled overdue check...");
+exports.sendMembershipEmail = functions.firestore
+    .document('members/{memberId}')
+    .onUpdate(async (change, context) => {
+        const newValue = change.after.data();
+        const previousValue = change.before.data();
 
-    const now = new Date();
-    const borrowedSnapshot = await db.collection('borrowLogs')
-        .where('status', '==', 'Borrowed')
-        .get();
+        // Check if status changed to 'approved'
+        if (newValue.status === 'approved' && previousValue.status !== 'approved') {
+            const email = newValue.email;
+            const name = newValue.fullName;
+            const membershipId = newValue.membershipId;
 
-    borrowedSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.expected_return_date) {
-            const returnDate = data.expected_return_date.toDate();
-            if (returnDate < now) {
-                logger.info(`Overdue item found for log ${doc.id}. User: ${data.user_email}`);
+            const mailOptions = {
+                from: 'IoT Club <admin@iotclub.com>',
+                to: email,
+                subject: 'Welcome to IoT Club - Membership Approved!',
+                html: `
+                    <div style="font-family: Arial, sans-serif; color: #333;">
+                        <h1 style="color: #00f3ff;">Welcome to the IoT Club! 🚀</h1>
+                        <p>Hi <strong>${name}</strong>,</p>
+                        <p>Your membership validation is complete. We are excited to have you on board.</p>
+                        
+                        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p><strong>Membership ID:</strong> <span style="font-size: 1.2em; color: #000;">${membershipId}</span></p>
+                        </div>
+                        
+                        <p>You can now log in to the lending platform and access our resources.</p>
+                        <p>Best Regards,<br>IoT Club Execom</p>
+                    </div>
+                `
+            };
 
-                // PLACEHOLDER: Send reminder to user
-                // sendEmail(data.user_email, "Overdue Item", "Please return your item.");
+            try {
+                await transporter.sendMail(mailOptions);
+                console.log(`Email sent to ${email}`);
+                // Optional: Update doc to say email sent
+            } catch (error) {
+                console.error('Error sending email:', error);
             }
         }
     });
-});
-const { onCall } = require("firebase-functions/v2/https");
-
-// Callable Function: Send Return Notification
-// Helper to "send" email (logs to console in emulator)
-exports.sendReturnNotification = onCall(async (request) => {
-    // Check if user is admin (optional security step, skipping for demo simplicity or relying on client-side check)
-    // const uid = request.auth.uid; 
-
-    const { email, userName, items } = request.data;
-    const itemsList = items.map(i => `${i.quantity}x ${i.device_name}`).join(', ');
-
-    logger.info(`Sending return notification to ${email}...`);
-    logger.info(`Subject: Return Reminder - IoT Club`);
-    logger.info(`Body: Hi ${userName || 'Student'}, please return the following items: ${itemsList}`);
-
-    return { message: `Email sent to ${email}` };
-});

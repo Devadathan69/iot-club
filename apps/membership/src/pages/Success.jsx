@@ -1,99 +1,70 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { toPng } from 'html-to-image';
-import { Download, CheckCircle, Share2, Home } from 'lucide-react';
-import MembershipCard from '../components/MembershipCard';
-import { generateMembershipId } from '../lib/membershipIdMock';
+import { CheckCircle, Clock, Home } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
 
 export default function Success() {
-    const cardRef = useRef(null);
+    const location = useLocation();
     const [member, setMember] = useState(null);
 
     useEffect(() => {
-        const data = sessionStorage.getItem('temp_member_data');
-        if (data) {
-            const userData = JSON.parse(data);
-            // Generate ID
-            const newId = generateMembershipId();
-            setMember({ ...userData, id: newId });
-
-            // FUTURE: Save to Firestore here
+        if (location.state && location.state.memberData) {
+            setMember(location.state.memberData);
         }
-    }, []);
+    }, [location]);
 
-    const handleDownload = async () => {
-        if (cardRef.current === null) return;
-
-        try {
-            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
-            const link = document.createElement('a');
-            link.download = `IOT-Club-Membership-${member.fullName}.png`;
-            link.href = dataUrl;
-            link.click();
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    if (!member) return null;
+    if (!member) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center text-white">
+                <p>No registration details found. <Link to="/" className="text-neon-cyan underline">Go Home</Link></p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 bg-grid-pattern">
-            <div className="max-w-4xl w-full grid md:grid-cols-2 gap-12 items-center">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-md w-full bg-dark-card border border-dark-border p-8 rounded-2xl text-center"
+            >
+                <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Clock className="w-10 h-10 text-yellow-500" />
+                </div>
 
-                {/* Visuals */}
-                <motion.div
-                    initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="order-2 md:order-1 flex flex-col items-center"
+                <h1 className="text-3xl font-display font-bold text-white mb-2">Registration Successful</h1>
+                <p className="text-gray-400 mb-6">
+                    We have received your payment proof.
+                </p>
+
+                <div className="bg-black/40 p-4 rounded-xl text-left space-y-3 mb-8 border border-white/5">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Name</span>
+                        <span className="text-white font-medium">{member.fullName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Transaction ID</span>
+                        <span className="text-neon-cyan font-mono">{member.transactionId}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Status</span>
+                        <span className="text-green-500 font-medium uppercase text-xs border border-green-500/30 px-2 py-0.5 rounded-full">
+                            Processing
+                        </span>
+                    </div>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-8">
+                    An admin will verify your transaction. Once approved, you will receive your Membership ID via email (if configured) or check back later.
+                </p>
+
+                <a
+                    href="http://localhost:5173"
+                    className="block w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                 >
-                    <div className="relative group cursor-pointer mb-8" onClick={handleDownload}>
-                        {/* The Card Component to be Captured */}
-                        <MembershipCard ref={cardRef} member={member} />
-
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl backdrop-blur-sm">
-                            <span className="text-white font-bold flex items-center gap-2">
-                                <Download className="w-5 h-5" /> Click to Download
-                            </span>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Success Message */}
-                <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="order-1 md:order-2 space-y-6 text-center md:text-left"
-                >
-                    <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto md:mx-0 mb-6">
-                        <CheckCircle className="w-8 h-8 text-green-500" />
-                    </div>
-
-                    <h1 className="text-4xl font-display font-bold">Welcome to the Club!</h1>
-                    <p className="text-gray-400 text-lg">
-                        Your registration was successful. You are now an official member of the IoT Club.
-                    </p>
-
-                    <div className="bg-dark-card border border-dark-border p-4 rounded-xl inline-block text-left w-full">
-                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Your Membership ID</p>
-                        <p className="text-neon-cyan font-mono text-xl">{member.id}</p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                        <button
-                            onClick={handleDownload}
-                            className="px-6 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Download className="w-4 h-4" /> Download Card
-                        </button>
-                        <button
-                            className="px-6 py-3 border border-dark-border text-gray-300 rounded-lg hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Share2 className="w-4 h-4" /> Share
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
+                    <Home className="w-4 h-4" /> Go to Main Website
+                </a>
+            </motion.div>
         </div>
     );
 }

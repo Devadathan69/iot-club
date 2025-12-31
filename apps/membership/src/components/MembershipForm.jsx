@@ -22,10 +22,11 @@ export default function MembershipForm() {
     const [formData, setFormData] = useState({
         fullName: '',
         admissionNo: '',
-        department: '',
+        batch: '',
         phone: '',
         email: ''
     });
+    const [rulesAccepted, setRulesAccepted] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -44,7 +45,7 @@ export default function MembershipForm() {
                 label="Full Name"
                 icon={User}
                 name="fullName"
-                placeholder="John Doe"
+                placeholder="Enter your name"
                 required
                 value={formData.fullName}
                 onChange={handleChange}
@@ -55,18 +56,18 @@ export default function MembershipForm() {
                     label="Admission No"
                     icon={Hash}
                     name="admissionNo"
-                    placeholder="2024..."
+                    placeholder="Enter your admission number"
                     required
                     value={formData.admissionNo}
                     onChange={handleChange}
                 />
                 <InputField
-                    label="Department"
+                    label="Batch"
                     icon={BookOpen}
-                    name="department"
-                    placeholder="CSE / ECE"
+                    name="batch"
+                    placeholder="Eg. S4DS"
                     required
-                    value={formData.department}
+                    value={formData.batch}
                     onChange={handleChange}
                 />
             </div>
@@ -87,17 +88,35 @@ export default function MembershipForm() {
                 icon={Mail}
                 name="email"
                 type="email"
-                placeholder="john@mace.ac.in"
+                placeholder="Enter your email"
                 required
                 value={formData.email}
                 onChange={handleChange}
             />
 
+            {/* Rules Checkbox */}
+            <div className="flex items-start gap-3 p-4 bg-gray-900/50 border border-gray-800 rounded-xl">
+                <input
+                    type="checkbox"
+                    id="rules"
+                    checked={rulesAccepted}
+                    onChange={(e) => setRulesAccepted(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-gray-600 text-neon-cyan focus:ring-neon-cyan/50 bg-gray-800"
+                />
+                <label htmlFor="rules" className="text-sm text-gray-400">
+                    I have read and agree to the <a href="https://drive.google.com/file/d/1ja5iRdEOfi0FrAYKFarZM5EwmffNQ-6T/view" target="_blank" rel="noopener noreferrer" className="text-neon-cyan underline hover:text-neon-cyan/80">Rules and Regulations</a> of the IoT Club.
+                </label>
+            </div>
+
             <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: rulesAccepted ? 1.02 : 1 }}
+                whileTap={{ scale: rulesAccepted ? 0.98 : 1 }}
                 type="submit"
-                className="w-full py-4 bg-neon-cyan text-black font-bold rounded-xl shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:shadow-[0_0_30px_rgba(0,243,255,0.5)] transition-all flex items-center justify-center gap-2 mt-8"
+                disabled={!rulesAccepted}
+                className={`w-full py-4 font-bold rounded-xl transition-all flex items-center justify-center gap-2 mt-8 ${rulesAccepted
+                    ? "bg-neon-cyan text-black shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:shadow-[0_0_30px_rgba(0,243,255,0.5)]"
+                    : "bg-gray-800 text-gray-500 cursor-not-allowed"
+                    }`}
             >
                 Proceed to Payment <ArrowRight className="w-5 h-5" />
             </motion.button>

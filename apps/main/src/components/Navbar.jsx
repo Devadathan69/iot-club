@@ -1,11 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Moon, Sun, Cpu } from 'lucide-react';
+import { Menu, X, Moon, Sun, Cpu, LogIn, LogOut, User } from 'lucide-react';
 import { clsx } from 'clsx';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Navbar() {
+    const { currentUser: user, logout, isAdmin } = useAuth();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isDark, setIsDark] = useState(true);
     const [scrolled, setScrolled] = useState(false);
@@ -24,7 +26,10 @@ export default function Navbar() {
         // Scroll handler
         const handleScroll = () => setScrolled(window.scrollY > 50);
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
     }, []);
 
     const toggleTheme = () => {
@@ -35,6 +40,15 @@ export default function Navbar() {
         } else {
             document.documentElement.classList.remove('dark');
             localStorage.theme = 'light';
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (error) {
+            console.error("Logout failed:", error);
         }
     };
 
@@ -92,9 +106,45 @@ export default function Navbar() {
                         {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                     </button>
 
+                    {user ? (
+                        <div className="flex items-center gap-4">
+                            {/* Admin Link */}
+                            {isAdmin && (
+                                <Link to="/admin" className="hidden md:block text-xs font-bold text-neon-cyan border border-neon-cyan/30 px-3 py-1.5 rounded-full hover:bg-neon-cyan/10 transition-colors">
+                                    Admin Dashboard
+                                </Link>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                                {user.photoURL ? (
+                                    <img src={user.photoURL} alt={user.displayName} className="w-8 h-8 rounded-full border border-neon-cyan" />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-neon-purple text-white flex items-center justify-center font-bold">
+                                        {user.displayName ? user.displayName[0] : <User className="w-4 h-4" />}
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                className="p-2 rounded-full hover:bg-red-500/10 text-red-500 transition-colors"
+                                title="Logout"
+                            >
+                                <LogOut className="w-5 h-5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <Link
+                            to="/login"
+                            className="px-5 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-105 transition-transform flex items-center gap-2"
+                        >
+                            <LogIn className="w-4 h-4" />
+                            Login
+                        </Link>
+                    )}
+
                     <a
                         href="http://localhost:5174"
-                        className="px-5 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-sm hover:scale-105 transition-transform"
+                        className="px-5 py-2 rounded-full bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/50 font-semibold text-sm hover:bg-neon-cyan hover:text-black transition-all"
                     >
                         Join Us
                     </a>
@@ -137,6 +187,20 @@ export default function Navbar() {
                                     </a>
                                 )
                             ))}
+                            {user ? (
+                                <div className="flex items-center justify-between border-t border-gray-200 dark:border-dark-border pt-4">
+                                    <div className="flex items-center gap-2">
+                                        {user.photoURL && <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full" />}
+                                        <span className="text-gray-800 dark:text-gray-200 font-medium">{user.displayName}</span>
+                                    </div>
+                                    <button onClick={handleLogout} className="text-red-500 font-medium">Logout</button>
+                                </div>
+                            ) : (
+                                <Link to="/login" onClick={() => setIsOpen(false)} className="w-full py-2 bg-neon-cyan text-black font-bold rounded-lg mt-2 flex justify-center">
+                                    Login with Google
+                                </Link>
+                            )}
+
                             <div className="flex items-center justify-between mt-4 border-t border-gray-200 dark:border-dark-border pt-4">
                                 <span className="text-gray-500 dark:text-gray-400">Theme</span>
                                 <button

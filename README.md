@@ -17,6 +17,15 @@ This project is organized as a monorepo using npm workspaces:
 - Node.js (v18 or higher)
 - npm (v9 or higher)
 
+### Environment Setup
+
+1.  Copy the example environment file:
+    ```bash
+    cp .env.example .env
+    ```
+2.  Fill in your Firebase and Cloudinary credentials in the `.env` file.
+    *(Note: For the Membership app, you need `VITE_CLOUDINARY_CLOUD_NAME` and `VITE_CLOUDINARY_UPLOAD_PRESET`)*
+
 ### Installation
 
 Install all dependencies for the entire workspace from the root directory:

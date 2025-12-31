@@ -1,0 +1,35 @@
+connectorId: example
+generate:
+  javascriptSdk:
+    - outputDir: ..\..\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..
+      react: false
+      angular: false
+    - outputDir: ..\..\legacy_reference\iot-main\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\legacy_reference\iot-main
+      react: true
+      angular: false
+    - outputDir: ..\..\apps\membership\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\apps\membership
+      react: true
+      angular: false
+    - outputDir: ..\..\apps\main\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\apps\main
+      react: true
+      angular: false
+    - outputDir: ..\..\apps\lending\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\apps\lending
+      react: true
+      angular: false
+  adminNodeSdk:
+    - outputDir: ..\..\functions\src\dataconnect-admin-generated
+      package: "@dataconnect/admin-generated"
+      packageJsonDir: ..\..\functions
+    - outputDir: ..\..\apps\lending\src\dataconnect-admin-generated
+      package: "@dataconnect/admin-generated"
+      packageJsonDir: ..\..\apps\lending

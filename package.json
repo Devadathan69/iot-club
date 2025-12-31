@@ -5,11 +5,15 @@
         "apps/*"
     ],
     "scripts": {
-        "dev": "concurrently \"npm run dev -w apps/main\" \"npm run dev -w apps/membership\" \"npm run dev -w apps/lending\" \"npm run emulators -w apps/lending\"",
+        "dev": "concurrently \"npm run dev -w apps/main\" \"npm run dev -w apps/membership\" \"npm run dev -w apps/lending\"",
         "deploy:lending": "npm run build -w apps/lending && firebase deploy --only hosting:lending",
         "deploy:main": "npm run build -w apps/main && firebase deploy --only hosting:main"
     },
     "devDependencies": {
-        "concurrently": "^8.2.2"
+        "concurrently": "^8.2.2",
+        "firebase-tools": "^15.1.0"
+    },
+    "dependencies": {
+        "@dataconnect/generated": "file:src/dataconnect-generated"
     }
 }

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "demo-project"
-  }
+    "default": "iot-club-main"
+  },
+  "targets": {},
+  "etags": {}
 }
