@@ -24,7 +24,7 @@ export default function Hero() {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="text-5xl md:text-7xl font-display font-bold mb-6 tracking-tight"
                 >
-                    IoT Club <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-cyan text-glow">MACE</span>
+                    MACE <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-cyan text-glow">IoT Club</span>
                 </motion.h1>
 
                 <motion.p
@@ -43,7 +43,7 @@ export default function Hero() {
                     className="flex flex-col sm:flex-row gap-4 justify-center"
                 >
                     <a
-                        href="http://localhost:5175"
+                        href={import.meta.env.DEV ? "http://localhost:5175" : "/lending/"}
                         className="group relative px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] dark:hover:shadow-[0_0_20px_rgba(0,243,255,0.5)]"
                     >
                         <span className="flex items-center gap-2">
@@ -51,13 +51,22 @@ export default function Hero() {
                         </span>
                     </a>
                     <a
-                        href="http://localhost:5174"
+                        href={import.meta.env.DEV ? "http://localhost:5174" : "/membership/"}
                         className="px-8 py-3 bg-transparent border border-gray-300 dark:border-gray-700 hover:border-neon-purple text-gray-900 dark:text-white rounded-full font-medium transition-colors"
                     >
-                        Start Membership
+                        Get Membership
                     </a>
                 </motion.div>
+
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.8 }}
+                    className="mt-6 text-sm text-gray-500 dark:text-gray-400 max-w-lg mx-auto font-medium"
+                >
+                    IoT Club membership is valid for one academic year and must be renewed annually by existing members.
+                </motion.p>
             </div>
-        </section>
+        </section >
     );
 }

@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { login, loginWithGoogle } = useAuth();
@@ -14,24 +14,15 @@ export default function Login() {
     const [error, setError] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const from = location.state?.from?.pathname || '/';
 
     async function handleSubmit(e) {
-        e.preventDefault();
-        try {
-            setError('');
-            setLoading(true);
-            await login(email, password);
-            navigate(from, { replace: true });
-        } catch (err) {
-            setError('Failed to sign in. Please check your credentials.');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+        // ... existing code ...
     }
 
+    // ... handleGoogleLogin ...
     async function handleGoogleLogin() {
         try {
             setError('');
@@ -49,6 +40,7 @@ export default function Login() {
     return (
         <div className="max-w-md mx-auto mt-12 px-4">
             <div className="bg-navy-900/80 p-8 rounded-2xl border border-navy-700 shadow-[0_0_50px_rgba(15,23,42,0.6)] backdrop-blur-sm relative overflow-hidden group">
+                {/* ... header ... */}
                 <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
                 <h2 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-500 mb-8 tracking-tight">
@@ -71,14 +63,24 @@ export default function Login() {
                         required
                         placeholder="student@example.com"
                     />
-                    <Input
-                        label="Password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        placeholder="••••••••"
-                    />
+                    <div className="relative">
+                        <Input
+                            label="Password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="••••••••"
+                            className="pr-10"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-9 text-gray-500 hover:text-white transition-colors"
+                        >
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                    </div>
 
                     <Button type="submit" className="w-full shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-shadow" disabled={loading}>
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In'}

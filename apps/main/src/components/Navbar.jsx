@@ -4,6 +4,7 @@ import { Menu, X, Moon, Sun, Cpu, LogIn, LogOut, User } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import logo from '../assets/logo.png';
 
 export default function Navbar() {
     const { currentUser: user, logout, isAdmin } = useAuth();
@@ -70,7 +71,7 @@ export default function Navbar() {
                 <Link to="/" className="flex items-center gap-3 group">
                     <div className="relative w-10 h-10 group-hover:scale-110 transition-transform duration-300">
                         <div className="absolute inset-0 bg-neon-cyan/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <img src="/src/assets/logo.png" alt="IoT Logo" className="w-full h-full object-cover relative z-10" />
+                        <img src={logo} alt="IoT Logo" className="w-full h-full object-cover relative z-10" />
                     </div>
                     <span className="font-display font-bold text-xl tracking-tight dark:text-white group-hover:text-neon-cyan transition-colors">
                         IoT Club
@@ -143,7 +144,7 @@ export default function Navbar() {
                     )}
 
                     <a
-                        href="http://localhost:5174"
+                        href={import.meta.env.DEV ? "http://localhost:5174" : "/membership/"}
                         className="px-5 py-2 rounded-full bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/50 font-semibold text-sm hover:bg-neon-cyan hover:text-black transition-all"
                     >
                         Join Us
@@ -188,12 +189,23 @@ export default function Navbar() {
                                 )
                             ))}
                             {user ? (
-                                <div className="flex items-center justify-between border-t border-gray-200 dark:border-dark-border pt-4">
-                                    <div className="flex items-center gap-2">
-                                        {user.photoURL && <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full" />}
-                                        <span className="text-gray-800 dark:text-gray-200 font-medium">{user.displayName}</span>
+                                <div className="flex flex-col gap-2 border-t border-gray-200 dark:border-dark-border pt-4">
+                                    {isAdmin && (
+                                        <Link
+                                            to="/admin"
+                                            onClick={() => setIsOpen(false)}
+                                            className="text-lg font-medium text-neon-cyan"
+                                        >
+                                            Admin Dashboard
+                                        </Link>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            {user.photoURL && <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full" />}
+                                            <span className="text-gray-800 dark:text-gray-200 font-medium">{user.displayName}</span>
+                                        </div>
+                                        <button onClick={handleLogout} className="text-red-500 font-medium">Logout</button>
                                     </div>
-                                    <button onClick={handleLogout} className="text-red-500 font-medium">Logout</button>
                                 </div>
                             ) : (
                                 <Link to="/login" onClick={() => setIsOpen(false)} className="w-full py-2 bg-neon-cyan text-black font-bold rounded-lg mt-2 flex justify-center">

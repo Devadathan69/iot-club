@@ -5,7 +5,10 @@ import Footer from './components/Footer';
 import Hero from './sections/Hero';
 import About from './sections/About';
 import Execom from './sections/Execom';
+import Contact from './sections/Contact';
 import { projects } from './data/contentData';
+
+{/* Lending Preview */ }
 import SectionWrapper from './components/SectionWrapper';
 import Background from './components/Background';
 import ProjectsPage from './pages/ProjectsPage';
@@ -81,6 +84,7 @@ const HomePage = () => (
         </SectionWrapper>
 
         <Execom />
+        <Contact />
 
         {/* Lending Preview */}
         <section className="py-24 px-4 bg-gradient-to-r from-gray-900 to-black text-white relative overflow-hidden">
@@ -91,8 +95,8 @@ const HomePage = () => (
                     Access our extensive library of sensors, microcontrollers, and tools.
                     Check availability and book items instantly.
                 </p>
-                <a href="http://localhost:5175" className="inline-block px-8 py-4 bg-neon-cyan text-black font-bold rounded-full hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] transition-all transform hover:-translate-y-1">
-                    Launch Component Lending System
+                <a href={import.meta.env.DEV ? "http://localhost:5175" : "/lending/"} className="inline-block px-8 py-4 bg-neon-cyan text-black font-bold rounded-full hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] transition-all transform hover:-translate-y-1">
+                    Goto Component Lending system
                 </a>
             </div>
         </section>

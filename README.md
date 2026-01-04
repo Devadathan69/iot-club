@@ -64,6 +64,22 @@ Access the apps at:
 - **Backend**: Firebase (Hosting, Firestore, Cloud Functions - Emulated Locally)
 - **Tooling**: npm workspaces, Concurrently
 
+## 🌍 Deployment
+
+### First-Time Deployment & Updates
+
+The process is the same for the initial deploy and for any future updates.
+
+1.  **Make your changes** in the code.
+2.  **Run the deployment script**:
+    ```bash
+    npm run deploy:free
+    ```
+    *This command rebuilds all applications, merges them, and uploads the new version to Firebase.*
+
+### ⚠️ Important Note
+Since we are using the **Free Tier (Spark)**, we use `deploy:free` to skip Cloud Functions deployment. If you upgrade to the Blaze plan in the future, you can use `npm run deploy` to include backend functions.
+
 ## 👥 Contributing
 
 1.  Clone the repository.

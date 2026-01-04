@@ -2,19 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { collection, query, where, getDocs, updateDoc, doc, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Check, X, ExternalLink, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Check, X, ExternalLink, Loader2, Image as ImageIcon, Download, FileText, Filter, ArrowUpDown } from 'lucide-react';
 import emailjs from '@emailjs/browser';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function AdminDashboard() {
     const [requests, setRequests] = useState([]);
+    const [filteredRequests, setFilteredRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
 
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'all'
 
+    // Filter & Sort States
+    const [batchFilter, setBatchFilter] = useState('all');
+    const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
+    const [availableBatches, setAvailableBatches] = useState([]);
+
     useEffect(() => {
         fetchRequests();
     }, [activeTab]);
+
+    useEffect(() => {
+        applyFiltersAndSort();
+    }, [requests, batchFilter, sortOrder]);
 
     const fetchRequests = async () => {
         setLoading(true);
@@ -26,44 +38,59 @@ export default function AdminDashboard() {
                     where('status', '==', 'pending_approval')
                 );
             } else {
-                q = query(
-                    collection(db, 'members'),
-                    orderBy('createdAt', 'desc') // Ensure Firestore index exists or remove this
-                );
+                q = query(collection(db, 'members'));
             }
 
-            // Try fetching with order, if fails (no index), fetch without order
-            try {
-                const querySnapshot = await getDocs(q);
-                const data = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setRequests(data);
-            } catch (indexError) {
-                console.warn("Indexing error, falling back to unordered fetch", indexError);
-                // Fallback for 'all' without index
-                const fallbackQ = activeTab === 'pending'
-                    ? query(collection(db, 'members'), where('status', '==', 'pending_approval'))
-                    : collection(db, 'members');
+            const querySnapshot = await getDocs(q);
+            let data = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
 
-                const querySnapshot = await getDocs(fallbackQ);
-                const data = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                // Client-side sort if needed
-                if (activeTab === 'all') {
-                    data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                }
-                setRequests(data);
+            if (activeTab === 'all') {
+                data = data.filter(r => r.status !== 'rejected');
+                // Extract batches
+                const batches = [...new Set(data.map(item => item.batch || item.department).filter(Boolean))].sort();
+                setAvailableBatches(batches);
             }
+
+            setRequests(data);
 
         } catch (error) {
             console.error("Error fetching requests:", error);
         } finally {
             setLoading(false);
         }
+    };
+
+    const applyFiltersAndSort = () => {
+        let result = [...requests];
+
+        // Filter
+        if (batchFilter !== 'all') {
+            result = result.filter(item => (item.batch || item.department) === batchFilter);
+        }
+
+        // Sort
+        result.sort((a, b) => {
+            const idA = a.membershipId || '';
+            const idB = b.membershipId || '';
+
+            // Extract numbers if present for smarter sort
+            const numA = parseInt(idA.replace(/\D/g, '')) || 0;
+            const numB = parseInt(idB.replace(/\D/g, '')) || 0;
+
+            if (numA !== numB) {
+                return sortOrder === 'asc' ? numA - numB : numB - numA;
+            }
+
+            // Fallback to string sort
+            return sortOrder === 'asc'
+                ? idA.localeCompare(idB)
+                : idB.localeCompare(idA);
+        });
+
+        setFilteredRequests(result);
     };
 
     const generateNextId = async () => {
@@ -165,6 +192,58 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleExportExcel = () => {
+        const headers = ["Membership ID", "Name", "Batch", "Phone", "Email"];
+        const csvContent = [
+            headers.join(","),
+            ...filteredRequests.map(item => [
+                item.membershipId || "Pending",
+                `"${item.fullName}"`, // Quote name to handle commas
+                item.batch || item.department,
+                item.phone,
+                item.email
+            ].join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `iot_club_members_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("IoT Club Members", 14, 22);
+        doc.setFontSize(11);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+        const tableColumn = ["ID", "Name", "Batch", "Phone", "Email"];
+        const tableRows = filteredRequests.map(item => [
+            item.membershipId || "Pending",
+            item.fullName,
+            item.batch || item.department,
+            item.phone,
+            item.email
+        ]);
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [0, 255, 255], textColor: [0, 0, 0] } // Neon Cyanish
+        });
+
+        doc.save(`iot_club_members_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     if (loading && requests.length === 0) return (
         <div className="min-h-screen pt-24 flex justify-center bg-white dark:bg-dark-bg text-black dark:text-white">
             <Loader2 className="animate-spin w-8 h-8 text-neon-cyan" />
@@ -195,13 +274,13 @@ export default function AdminDashboard() {
 
             {/* Content Switch */}
             {activeTab === 'pending' ? (
-                requests.length === 0 ? (
+                filteredRequests.length === 0 ? (
                     <div className="text-center py-20 bg-gray-100 dark:bg-dark-card rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
                         <p className="text-gray-500">No pending verification requests.</p>
                     </div>
                 ) : (
                     <div className="grid gap-6">
-                        {requests.map((request) => (
+                        {filteredRequests.map((request) => (
                             <motion.div
                                 key={request.id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -270,10 +349,55 @@ export default function AdminDashboard() {
                 )
             ) : (
                 /* ALL MEMBERS TABLE */
+                /* ALL MEMBERS TABLE */
                 <div className="space-y-4">
+                    {/* Controls */}
+                    <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-dark-card p-4 rounded-xl border border-gray-200 dark:border-dark-border">
+                        <div className="flex flex-wrap gap-3 items-center">
+                            <div className="flex items-center gap-2">
+                                <Filter className="w-4 h-4 text-gray-500" />
+                                <select
+                                    className="bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-dark-border rounded-lg px-3 py-1.5 text-sm"
+                                    value={batchFilter}
+                                    onChange={(e) => setBatchFilter(e.target.value)}
+                                >
+                                    <option value="all">All Batches</option>
+                                    {availableBatches.map(b => (
+                                        <option key={b} value={b}>{b}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-dark-border rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-white/5"
+                            >
+                                <ArrowUpDown className="w-3 h-3" />
+                                {sortOrder === 'asc' ? 'ID (Asc)' : 'ID (Desc)'}
+                            </button>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleExportExcel}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-600 border border-green-500/20 rounded-lg text-sm hover:bg-green-500/20 transition-colors"
+                            >
+                                <FileText className="w-4 h-4" />
+                                Excel (CSV)
+                            </button>
+                            <button
+                                onClick={handleExportPDF}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-600 border border-red-500/20 rounded-lg text-sm hover:bg-red-500/20 transition-colors"
+                            >
+                                <FileText className="w-4 h-4" />
+                                PDF
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="bg-white dark:bg-dark-card p-4 rounded-xl border border-gray-200 dark:border-dark-border flex justify-between items-center">
                         <span className="font-medium text-gray-500 dark:text-gray-400">Total Members</span>
-                        <span className="text-2xl font-bold font-display text-neon-cyan">{requests.length}</span>
+                        <span className="text-2xl font-bold font-display text-neon-cyan">{filteredRequests.length}</span>
                     </div>
 
                     <div className="overflow-x-auto bg-gray-50 dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border">
@@ -290,7 +414,7 @@ export default function AdminDashboard() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
-                                {requests.map((member, index) => (
+                                {filteredRequests.map((member, index) => (
                                     <tr key={member.id} className="hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                                         <td className="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono">{index + 1}</td>
                                         <td className="px-6 py-4 font-medium">{member.fullName}</td>
@@ -317,7 +441,7 @@ export default function AdminDashboard() {
                                 ))}
                             </tbody>
                         </table>
-                        {requests.length === 0 && <div className="p-8 text-center text-gray-500">No members found.</div>}
+                        {filteredRequests.length === 0 && <div className="p-8 text-center text-gray-500">No members found.</div>}
                     </div>
                 </div>
             )}

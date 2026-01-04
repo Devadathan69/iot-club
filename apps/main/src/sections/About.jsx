@@ -18,7 +18,7 @@ export default function About() {
                     <div>
                         <h2 className="text-3xl font-display font-bold mb-6">Building the Future,<br /><span className="text-neon-cyan">Bit by Bit.</span></h2>
                         <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
-                            The IoT Club at MACE is more than just a technical society; it's an incubator for ideas.
+                            The MACE IoT Club is more than just a technical society; it's an incubator for ideas.
                             We bridge the gap between software and hardware, enabling students to build smart, connected solutions for real-world problems.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8">

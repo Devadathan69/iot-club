@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
 export default function Login() {
@@ -14,6 +14,7 @@ export default function Login() {
     const [error, setError] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const from = location.state?.from?.pathname || '/';
 
@@ -49,6 +50,7 @@ export default function Login() {
     return (
         <div className="min-h-screen pt-24 pb-12 flex items-center justify-center p-4 bg-black text-white">
             <div className="max-w-md w-full mx-auto px-4">
+                {/* ... card content ... */}
                 <div className="bg-gray-900/80 p-8 rounded-2xl border border-gray-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-sm relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/10 to-neon-cyan/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
@@ -73,15 +75,24 @@ export default function Login() {
                             placeholder="student@example.com"
                             className="bg-black/50 border-gray-700 text-white placeholder:text-gray-600 focus:border-neon-cyan"
                         />
-                        <Input
-                            label="Password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            placeholder="••••••••"
-                            className="bg-black/50 border-gray-700 text-white placeholder:text-gray-600 focus:border-neon-cyan"
-                        />
+                        <div className="relative">
+                            <Input
+                                label="Password"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                placeholder="••••••••"
+                                className="bg-black/50 border-gray-700 text-white placeholder:text-gray-600 focus:border-neon-cyan pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-9 text-gray-500 hover:text-white transition-colors"
+                            >
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
 
                         <Button type="submit" className="w-full shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-shadow bg-neon-cyan text-black hover:bg-neon-cyan/80 font-bold" disabled={loading}>
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In'}

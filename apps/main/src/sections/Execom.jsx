@@ -16,7 +16,8 @@ const MemberCard = ({ member, teamId }) => {
     // Given the constraint "Static landing website" and "no backend", 
     // best approach for dynamic images in Vite is `new URL(path, import.meta.url).href` 
 
-    const imagePath = `/src/assets/execom/${teamId}/${member.name}-${member.class}.jpg`;
+    // Images are now in 'public/assets/execom' which serves to '/assets/execom'
+    const imagePath = `/assets/execom/${teamId}/${member.name}-${member.class}.jpg`;
 
     return (
         <div className="group relative">

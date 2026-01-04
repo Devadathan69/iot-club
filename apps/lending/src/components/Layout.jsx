@@ -30,7 +30,7 @@ export default function Layout() {
                                 IoT Club
                             </span>
                         </Link>
-                        <a href="http://localhost:5173" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
+                        <a href={import.meta.env.DEV ? "http://localhost:5173" : "/"} className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
                             Back to Home
                         </a>
                     </div>

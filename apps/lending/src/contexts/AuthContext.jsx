@@ -30,7 +30,11 @@ export function AuthProvider({ children }) {
             if (user) {
                 // Check Admin Claim
                 const token = await user.getIdTokenResult();
-                setIsAdmin(!!token.claims.admin);
+                if (token.claims.admin || user.email === 'admin@iotclub.com' || user.email === 'admin@maceiot.com') {
+                    setIsAdmin(true);
+                } else {
+                    setIsAdmin(false);
+                }
 
                 // Check Membership Status
                 try {

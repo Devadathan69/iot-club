@@ -55,11 +55,11 @@ export default function Success() {
                 </div>
 
                 <p className="text-sm text-gray-500 mb-8">
-                    An admin will verify your transaction. Once approved, you will receive your Membership ID via email (if configured) or check back later.
+                    An admin will verify your transaction. Once approved, you will receive your Membership ID via email or check back later.
                 </p>
 
                 <a
-                    href="http://localhost:5173"
+                    href={import.meta.env.DEV ? "http://localhost:5173" : "/"}
                     className="block w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                 >
                     <Home className="w-4 h-4" /> Go to Main Website
