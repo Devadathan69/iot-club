@@ -10,7 +10,7 @@ This project is organized as a monorepo using npm workspaces:
 - **`apps/membership`**: The new student membership registration portal (Mocked Payment & ID Generation).
 - **`apps/lending`**: The legacy lending system for borrowing components.
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
