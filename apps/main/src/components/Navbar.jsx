@@ -59,6 +59,7 @@ export default function Navbar() {
         { name: 'About', href: isHome ? '#about' : '/#about' },
         { name: 'Domains', href: isHome ? '#domains' : '/#domains' },
         { name: 'Team', href: isHome ? '#execom' : '/#execom' },
+        { name: 'Events', href: '/events', isRoute: true },
         { name: 'Projects', href: '/projects', isRoute: true },
     ];
 

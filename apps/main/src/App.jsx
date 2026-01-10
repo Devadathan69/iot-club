@@ -16,6 +16,7 @@ import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import EventsPage from './pages/EventsPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 
@@ -116,6 +117,7 @@ function App() {
                         <Route path="/admin" element={<AdminDashboard />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
+                        <Route path="/events" element={<EventsPage />} />
                     </Routes>
                 </StoreLayout>
             </Router>
