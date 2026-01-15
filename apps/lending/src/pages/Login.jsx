@@ -19,7 +19,19 @@ export default function Login() {
     const from = location.state?.from?.pathname || '/';
 
     async function handleSubmit(e) {
-        // ... existing code ...
+        e.preventDefault();
+
+        try {
+            setError('');
+            setLoading(true);
+            await login(email, password);
+            navigate(from, { replace: true });
+        } catch (err) {
+            setError('Failed to sign in. Please check your credentials.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }
 
     // ... handleGoogleLogin ...

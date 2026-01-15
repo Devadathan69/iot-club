@@ -46,6 +46,7 @@ export async function createLendRequest({ userInfo, items, message }) {
 export async function acceptRequest(requestId, adminUid, pickupDate, expectedReturnDate) {
     try {
         await runTransaction(db, async (transaction) => {
+            // READ 1: Get the request document
             const requestRef = doc(db, "lendRequests", requestId);
             const requestDoc = await transaction.get(requestRef);
 
@@ -58,10 +59,25 @@ export async function acceptRequest(requestId, adminUid, pickupDate, expectedRet
                 throw "Request is not in Pending state.";
             }
 
-            // Check stock availability
+            // READ 2: Get all device documents
+            const deviceReads = [];
+            const deviceRefs = [];
+
             for (const item of requestData.items) {
                 const deviceRef = doc(db, "devices", item.device_id);
-                const deviceDoc = await transaction.get(deviceRef);
+                deviceRefs.push({ ref: deviceRef, item: item }); // Store ref and item metadata
+                deviceReads.push(transaction.get(deviceRef));
+            }
+
+            const deviceDocs = await Promise.all(deviceReads);
+
+            // LOGIC CHECK: Stock availability
+            // We need to map the results back to the items to check stock
+            const devicesToUpdate = [];
+
+            for (let i = 0; i < deviceDocs.length; i++) {
+                const deviceDoc = deviceDocs[i];
+                const { item, ref } = deviceRefs[i];
 
                 if (!deviceDoc.exists()) {
                     throw `Device ${item.device_name} not found.`;
@@ -72,13 +88,23 @@ export async function acceptRequest(requestId, adminUid, pickupDate, expectedRet
                     throw `Insufficient stock for ${item.device_name}. Available: ${deviceData.available_stock}`;
                 }
 
-                // Decrement stock
-                transaction.update(deviceRef, {
-                    available_stock: deviceData.available_stock - item.quantity
+                // Prepare write data
+                devicesToUpdate.push({
+                    ref: ref,
+                    newStock: deviceData.available_stock - item.quantity
                 });
             }
 
-            // Create Borrow Log
+            // --- ALL READS COMPLETE, START WRITES ---
+
+            // WRITE 1: Update device stocks
+            for (const update of devicesToUpdate) {
+                transaction.update(update.ref, {
+                    available_stock: update.newStock
+                });
+            }
+
+            // WRITE 2: Create Borrow Log
             const borrowLogRef = doc(collection(db, "borrowLogs"));
             transaction.set(borrowLogRef, {
                 request_id: requestId,
@@ -96,7 +122,7 @@ export async function acceptRequest(requestId, adminUid, pickupDate, expectedRet
                 returned_by: null
             });
 
-            // Update Request
+            // WRITE 3: Update Request
             transaction.update(requestRef, {
                 status: "Accepted",
                 admin_id: adminUid,
