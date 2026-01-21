@@ -142,10 +142,24 @@ export async function acceptRequest(requestId, adminUid, pickupDate, expectedRet
 export async function manualLend(adminUid, userInfo, items, expectedReturnDate) {
     try {
         await runTransaction(db, async (transaction) => {
-            // Check stock availability and decrement
+            // READ PHASE: Gather all device data
+            const deviceReads = [];
+            const deviceContexts = [];
+
             for (const item of items) {
                 const deviceRef = doc(db, "devices", item.id);
-                const deviceDoc = await transaction.get(deviceRef);
+                deviceReads.push(transaction.get(deviceRef));
+                deviceContexts.push({ ref: deviceRef, item });
+            }
+
+            const deviceDocs = await Promise.all(deviceReads);
+
+            // LOGIC PHASE: Check stock and prepare updates
+            const updates = [];
+
+            for (let i = 0; i < deviceDocs.length; i++) {
+                const deviceDoc = deviceDocs[i];
+                const { item, ref } = deviceContexts[i];
 
                 if (!deviceDoc.exists()) {
                     throw `Device ${item.name} not found.`;
@@ -156,8 +170,16 @@ export async function manualLend(adminUid, userInfo, items, expectedReturnDate) 
                     throw `Insufficient stock for ${item.name}. Available: ${deviceData.available_stock}`;
                 }
 
-                transaction.update(deviceRef, {
-                    available_stock: deviceData.available_stock - item.quantity
+                updates.push({
+                    ref: ref,
+                    newStock: deviceData.available_stock - item.quantity
+                });
+            }
+
+            // WRITE PHASE: Perform all updates
+            for (const update of updates) {
+                transaction.update(update.ref, {
+                    available_stock: update.newStock
                 });
             }
 
@@ -193,9 +215,10 @@ export async function manualLend(adminUid, userInfo, items, expectedReturnDate) 
 /**
  * Marks items as returned.
  */
-export async function markReturned(logId, returnedItems, returnedByUid) {
+export async function markReturned(logId, returnedItems, returnedByUid, fineAmount = 0) {
     try {
         await runTransaction(db, async (transaction) => {
+            // READ 1: Get the borrow log
             const logRef = doc(db, "borrowLogs", logId);
             const logDoc = await transaction.get(logRef);
 
@@ -203,24 +226,48 @@ export async function markReturned(logId, returnedItems, returnedByUid) {
                 throw "Borrow log not found.";
             }
 
-            // Increment stock
+            // READ 2: Get all device documents
+            const deviceReads = [];
+            const deviceContexts = [];
+
             for (const item of returnedItems) {
                 const deviceRef = doc(db, "devices", item.device_id);
-                const deviceDoc = await transaction.get(deviceRef);
+                deviceReads.push(transaction.get(deviceRef));
+                deviceContexts.push({ ref: deviceRef, item });
+            }
+
+            const deviceDocs = await Promise.all(deviceReads);
+
+            // LOGIC PHASE: Prepare stock updates
+            const updates = [];
+
+            for (let i = 0; i < deviceDocs.length; i++) {
+                const deviceDoc = deviceDocs[i];
+                const { ref, item } = deviceContexts[i];
 
                 if (deviceDoc.exists()) {
                     const deviceData = deviceDoc.data();
-                    transaction.update(deviceRef, {
-                        available_stock: deviceData.available_stock + item.quantity
+                    updates.push({
+                        ref: ref,
+                        newStock: deviceData.available_stock + item.quantity
                     });
                 }
             }
 
-            // Update Log
+            // WRITE PHASE: Perform all updates
+            // 1. Update device stocks
+            for (const update of updates) {
+                transaction.update(update.ref, {
+                    available_stock: update.newStock
+                });
+            }
+
+            // 2. Update Log
             transaction.update(logRef, {
                 status: "Returned",
                 date_returned: serverTimestamp(),
-                returned_by: returnedByUid
+                returned_by: returnedByUid,
+                fine_amount: fineAmount
             });
         });
         return { success: true };

@@ -103,6 +103,12 @@ export default function Cart() {
 
                         {!showRequestForm && cartItems.length > 0 && (
                             <div className="p-4 border-t border-navy-700 bg-navy-800/50">
+                                <div className="mb-3 px-1">
+                                    <p className="text-xs text-amber-500/80 flex items-center gap-1.5 justify-center text-center">
+                                        <span className="shrink-0">⚠️</span>
+                                        Late returns ({'>'}14 days) will incur a fine of ₹2.
+                                    </p>
+                                </div>
                                 <Button onClick={handleCheckout} className="w-full flex items-center justify-center gap-2">
                                     {currentUser ? 'Proceed to Request' : 'Login to Request'}
                                     <ArrowRight className="w-4 h-4" />

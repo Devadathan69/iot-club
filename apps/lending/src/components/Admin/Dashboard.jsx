@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Loader2, Check, X, Plus, Trash2, Edit2 } from 'lucide-react';
 import InventoryForm from './InventoryForm';
+import ManualLendModal from './ManualLendModal';
 
 export default function Dashboard() {
     const { currentUser } = useAuth();
@@ -16,6 +17,7 @@ export default function Dashboard() {
     const [devices, setDevices] = useState([]);
     const [activeTab, setActiveTab] = useState('requests');
     const [showInventoryForm, setShowInventoryForm] = useState(false);
+    const [showManualLend, setShowManualLend] = useState(false);
     const [editingDevice, setEditingDevice] = useState(null);
 
     const sendReturnNotification = httpsCallable(functions, 'sendReturnNotification');
@@ -67,9 +69,9 @@ export default function Dashboard() {
     const handleAccept = async (request) => {
         if (!confirm('Accept this request?')) return;
         try {
-            // Default return date: 7 days from now
+            // Default return date: 14 days from now (per fine policy)
             const returnDate = new Date();
-            returnDate.setDate(returnDate.getDate() + 7);
+            returnDate.setDate(returnDate.getDate() + 14);
 
             await acceptRequest(request.id, currentUser.uid, new Date(), returnDate);
         } catch (error) {
@@ -90,9 +92,41 @@ export default function Dashboard() {
     };
 
     const handleReturn = async (log) => {
-        if (!confirm('Mark items as returned?')) return;
+        const now = new Date();
+        const dueDate = log.expected_return_date?.toDate();
+        let fine = 0;
+        let daysOverdue = 0;
+
+        if (dueDate && now > dueDate) {
+            const diffTime = Math.abs(now - dueDate);
+            daysOverdue = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (daysOverdue > 10) { // Should this be > 0 (strictly after due date which IS 10 days)? 
+                // User said "if the due date of 10 days is exceeded". That implies due date IS the limit.
+                // So if return is *after* due date, fine applies?
+                // Wait, "if the due date of 10 days is exceeded". 
+                // Usually means: You have 10 days. If you take 11, fine.
+                // So if now > dueDate.
+                // But wait, "late returns > 10 days".
+                // If I set due date to +10 days, then any time after due date is > 10 days from borrow.
+                fine = 50;
+            }
+        }
+
+        // Simplification: logic is "if overdue, fine is 50".
+        // If dueDate is passed, it is overdue.
+        if (dueDate && now > dueDate) {
+            fine = 50;
+        }
+
+
+        const message = fine > 0
+            ? `⚠️ OVERDUE! Fine of ₹${fine} applies.\n\nMark items as returned after collecting fine?`
+            : 'Mark items as returned?';
+
+        if (!confirm(message)) return;
+
         try {
-            await markReturned(log.id, log.items, currentUser.uid);
+            await markReturned(log.id, log.items, currentUser.uid, fine);
         } catch (error) {
             alert(error);
         }
@@ -109,24 +143,33 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-6">
-            <div className="flex gap-4 border-b border-navy-700 pb-1">
+            <ManualLendModal isOpen={showManualLend} onClose={() => setShowManualLend(false)} />
+
+            <div className="flex gap-4 border-b border-navy-700 pb-1 overflow-x-auto">
                 <button
                     onClick={() => setActiveTab('requests')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'requests' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'requests' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
                         }`}
                 >
                     Pending Requests
                 </button>
                 <button
                     onClick={() => setActiveTab('active')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'active' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'active' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
                         }`}
                 >
                     Active Borrows
                 </button>
                 <button
+                    onClick={() => setActiveTab('history')}
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'history' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                >
+                    History
+                </button>
+                <button
                     onClick={() => setActiveTab('inventory')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'inventory' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-4 py-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'inventory' ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-slate-200'
                         }`}
                 >
                     Inventory
@@ -176,6 +219,13 @@ export default function Dashboard() {
 
             {activeTab === 'active' && (
                 <div className="space-y-4">
+                    <div className="flex justify-end">
+                        <Button onClick={() => setShowManualLend(true)} variant="outline" className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Manual Lend / Offline Register
+                        </Button>
+                    </div>
+
                     {borrowLogs.filter(l => l.status === 'Borrowed').length === 0 && (
                         <p className="text-slate-500">No active borrows.</p>
                     )}
@@ -201,6 +251,43 @@ export default function Dashboard() {
                                     <li key={idx} className="text-sm text-slate-300 flex justify-between">
                                         <span>{item.device_name}</span>
                                         <span className="font-mono text-cyan-400">x{item.quantity}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {activeTab === 'history' && (
+                <div className="space-y-4">
+                    {borrowLogs.filter(l => l.status === 'Returned').length === 0 && (
+                        <p className="text-slate-500">No history available.</p>
+                    )}
+                    {borrowLogs.filter(l => l.status === 'Returned').map(log => (
+                        <div key={log.id} className="bg-navy-800 p-4 rounded-lg border border-navy-700 opacity-75">
+                            <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+                                <div>
+                                    <h3 className="font-bold text-slate-300">{log.user_name || log.user_email}</h3>
+                                    <p className="text-sm text-slate-400">Returned: {log.date_returned?.toDate().toLocaleDateString()}</p>
+                                    <p className="text-xs text-slate-500">{log.user_email}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="inline-block px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/20">
+                                        Returned
+                                    </span>
+                                    {log.fine_amount > 0 && (
+                                        <div className="mt-2 text-xs text-red-400 font-mono">
+                                            Fine Paid: ₹{log.fine_amount}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <ul className="space-y-1">
+                                {log.items.map((item, idx) => (
+                                    <li key={idx} className="text-sm text-slate-400 flex justify-between">
+                                        <span>{item.device_name}</span>
+                                        <span className="font-mono text-slate-500">x{item.quantity}</span>
                                     </li>
                                 ))}
                             </ul>

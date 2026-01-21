@@ -70,27 +70,33 @@ export default function DeviceModal({ device, isOpen, onClose }) {
                                     </div>
 
                                     {device.available_stock > 0 ? (
-                                        <div className="flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-3 bg-navy-900 rounded-lg p-1 border border-navy-700">
-                                                <button
-                                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                                    className="p-2 hover:text-cyan-400 disabled:opacity-50"
-                                                    disabled={quantity <= 1}
-                                                >
-                                                    <Minus className="w-4 h-4" />
-                                                </button>
-                                                <span className="font-mono w-8 text-center">{quantity}</span>
-                                                <button
-                                                    onClick={() => setQuantity(Math.min(device.available_stock, quantity + 1))}
-                                                    className="p-2 hover:text-cyan-400 disabled:opacity-50"
-                                                    disabled={quantity >= device.available_stock}
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                </button>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3 bg-navy-900 rounded-lg p-1 border border-navy-700">
+                                                    <button
+                                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                                        className="p-2 hover:text-cyan-400 disabled:opacity-50"
+                                                        disabled={quantity <= 1}
+                                                    >
+                                                        <Minus className="w-4 h-4" />
+                                                    </button>
+                                                    <span className="font-mono w-8 text-center">{quantity}</span>
+                                                    <button
+                                                        onClick={() => setQuantity(Math.min(device.available_stock, quantity + 1))}
+                                                        className="p-2 hover:text-cyan-400 disabled:opacity-50"
+                                                        disabled={quantity >= device.available_stock}
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <Button onClick={handleAddToCart} className="flex-1">
+                                                    Add to Cart
+                                                </Button>
                                             </div>
-                                            <Button onClick={handleAddToCart} className="flex-1">
-                                                Add to Cart
-                                            </Button>
+                                            <p className="text-xs text-amber-500/80 flex items-center gap-1.5 justify-end">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                Late returns ({'>'}14 days) will incur a fine of ₹2.
+                                            </p>
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-2 text-amber-400 bg-amber-400/10 p-3 rounded-lg border border-amber-400/20">
