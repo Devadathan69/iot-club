@@ -160,10 +160,28 @@ export default function Navbar() {
                         </a>
                     </div>
 
-                    {/* Mobile Toggle */}
-                    <button className="md:hidden text-gray-800 dark:text-white" onClick={() => setIsOpen(!isOpen)}>
-                        {isOpen ? <X /> : <Menu />}
-                    </button>
+                    {/* Mobile Profile & Menu Toggle */}
+                    <div className="flex items-center gap-4 md:hidden">
+                        {user && (
+                            <button
+                                onClick={() => setShowProfile(true)}
+                                className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-purple to-neon-cyan p-[1px]"
+                            >
+                                <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                                    {user.photoURL ? (
+                                        <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center font-bold text-white text-xs">
+                                            {user.displayName ? user.displayName[0] : <User className="w-4 h-4" />}
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+                        )}
+                        <button className="text-gray-800 dark:text-white" onClick={() => setIsOpen(!isOpen)}>
+                            {isOpen ? <X /> : <Menu />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Mobile Menu */}

@@ -25,7 +25,7 @@ export default function Navbar() {
                     </a>
 
                     <div className="flex items-center gap-6">
-                        <a href="http://localhost:5173" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                        <a href="http://localhost:5173" className="hidden md:block text-sm font-medium text-gray-400 hover:text-white transition-colors">
                             Back to Home
                         </a>
 
